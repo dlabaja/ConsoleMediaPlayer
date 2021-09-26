@@ -12,8 +12,6 @@ public class BadApple
     {
         Console.Title = "Console Media Player";
         Console.SetBufferSize(128, 64);
-        Console.WriteLine(Console.BufferHeight);
-        Console.WriteLine(Console.BufferWidth);
         var a = new BadApple();
         var bitmap = (Bitmap)Image.FromFile("badapple64.gif");
         var result = bitmap.Clone(new Rectangle(0, 0, bitmap.Width, bitmap.Height), PixelFormat.Format1bppIndexed);
@@ -56,8 +54,6 @@ public class BadApple
             barvy += "\n";
         }
         Thread.Sleep(1000 / 24);
-        //Console.Clear();
-
         Console.Write(barvy);
     }
 }
