@@ -1,39 +1,92 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Imaging;
-using System.Collections.Generic;
-using System.IO;
+using System.Linq;
+using System.Media;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Xabe.FFmpeg;
+using System.Timers;
+using System.Diagnostics;
+using System.IO;
 
-public class BadApple
+internal class ConsoleMediaPlayer
 {
-    private static void Main(string[] args)
+    private static string output = Path.Combine(Path.GetTempPath(), "CMP", "sample");
+    private static MemoryStream media;
+    private static Bitmap img;
+    private static int numberOfFrames;
+    private static System.Timers.Timer t;
+    private static int i = 0;
+
+    private async static Task Main(string[] args)
     {
         Console.Title = "Console Media Player";
         Console.SetBufferSize(128, 64);
-        var a = new BadApple();
-        var bitmap = (Bitmap)Image.FromFile("badapple64.gif");
-        var result = bitmap.Clone(new Rectangle(0, 0, bitmap.Width, bitmap.Height), PixelFormat.Format1bppIndexed);
+        var a = new ConsoleMediaPlayer();
+        await a.Converter();
+        img = (Bitmap)Image.FromStream(media);
         Console.ForegroundColor = ConsoleColor.DarkGray;
-        a.GetGifFrames(bitmap);
+        a.GetGifFrames();
         Console.ReadKey();
     }
 
-    private void GetGifFrames(Bitmap img)
+    private async Task Converter()
     {
-        var numberOfFrames = img.GetFrameCount(FrameDimension.Time);
-        Bitmap[] frames = new Bitmap[numberOfFrames];
+        Console.WriteLine("Načítám data...");
+        Console.WriteLine("Zadejte cestu k .mp4 souboru");
+        string input = Console.ReadLine();
 
-        for (int i = 0; i < numberOfFrames; i++)
+        while (!Path.IsPathFullyQualified(input))
         {
-            Console.WriteLine(i);
-            img.SelectActiveFrame(FrameDimension.Time, i);
-            Console.WriteLine(frames[i]);
-            frames[i] = (Bitmap)img.Clone();
-            GetColor(frames[i]);
-            frames[i].Dispose();
+            Console.WriteLine("Neplatná cesta! Zkuste to prosím znovu.");
+            input = Console.ReadLine();
         }
+
+        Directory.CreateDirectory(Path.Combine(Path.GetTempPath(), "CMP"));
+
+        media = new MemoryStream();
+        await FFmpeg.Conversions.New().Start($"-y -i \"{ input }\" -s 64x64 -aspect 1:1 -pix_fmt monow -filter:v fps=25 \"{output}.gif\"");
+        using (FileStream fs = File.OpenRead(output + ".gif"))
+        {
+            fs.CopyTo(media);
+            fs.Close();
+        }
+        Console.WriteLine("Načten obraz");
+
+        await FFmpeg.Conversions.New().Start($"-y -i \"{ input }\" \"{ output }.wav\"");
+        Console.WriteLine("Načten zvuk");
+
+        SoundPlayer player = new SoundPlayer();
+        player.SoundLocation = output + ".wav";
+        player.Play();
+        Console.Clear();
+    }
+
+    private void GetGifFrames()
+    {
+        numberOfFrames = img.GetFrameCount(FrameDimension.Time);
+
+        t = new System.Timers.Timer(1000 / 25);
+        t.Elapsed += OnNewFrame;
+        t.Start();
+    }
+
+    private void OnNewFrame(object sender, ElapsedEventArgs e)
+    {
+        i++;
+        if (i >= numberOfFrames)
+            End();
+
+        Bitmap[] frames = new Bitmap[numberOfFrames];
+        Console.WriteLine();
+
+        img.SelectActiveFrame(FrameDimension.Time, i);
+        frames[i] = (Bitmap)img.Clone();
+        GetColor(frames[i]);
+        frames[i].Dispose();
     }
 
     private void GetColor(Bitmap frame)
@@ -53,7 +106,14 @@ public class BadApple
             }
             barvy += "\n";
         }
-        Thread.Sleep(1000 / 24);
         Console.Write(barvy);
+    }
+
+    private void End()
+    {
+        t.Stop();
+        t.Dispose();
+        Console.Clear();
+        Console.WriteLine("\nhttps://github.com/dlabaja/ConsoleMediaPlayer");
     }
 }
