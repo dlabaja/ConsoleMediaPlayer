@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
@@ -14,6 +14,8 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Crayon" Version="2.0.62" />
+    <PackageReference Include="Pastel" Version="2.1.0" />
     <PackageReference Include="System.Drawing.Common" Version="5.0.2" />
     <PackageReference Include="System.Windows.Extensions" Version="5.0.0" />
     <PackageReference Include="Xabe.FFmpeg" Version="5.0.2" />

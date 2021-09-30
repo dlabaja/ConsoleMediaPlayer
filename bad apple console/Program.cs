@@ -1,16 +1,15 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Imaging;
-using System.Linq;
 using System.Media;
-using System.Text;
-using System.Threading;
 using System.Threading.Tasks;
 using Xabe.FFmpeg;
 using System.Timers;
-using System.Diagnostics;
 using System.IO;
+using static Crayon.Output;
+using System.Diagnostics;
+using Pastel;
+using System.Runtime.InteropServices;
 
 internal class ConsoleMediaPlayer
 {
@@ -18,17 +17,19 @@ internal class ConsoleMediaPlayer
     private static MemoryStream media;
     private static Bitmap img;
     private static int numberOfFrames;
-    private static System.Timers.Timer t;
+    private static Timer t;
     private static int i = 0;
 
     private async static Task Main(string[] args)
     {
         Console.Title = "Console Media Player";
         Console.SetBufferSize(128, 64);
+
+        Console.WindowWidth = 128;
+        Console.WindowHeight = 64;
         var a = new ConsoleMediaPlayer();
         await a.Converter();
         img = (Bitmap)Image.FromStream(media);
-        Console.ForegroundColor = ConsoleColor.DarkGray;
         a.GetGifFrames();
         Console.ReadKey();
     }
@@ -48,7 +49,7 @@ internal class ConsoleMediaPlayer
         Directory.CreateDirectory(Path.Combine(Path.GetTempPath(), "CMP"));
 
         media = new MemoryStream();
-        await FFmpeg.Conversions.New().Start($"-y -i \"{ input }\" -s 64x64 -aspect 1:1 -pix_fmt monow -filter:v fps=25 \"{output}.gif\"");
+        await FFmpeg.Conversions.New().Start($"-y -i \"{input}\" -s 64x64 -aspect 1:1 -pix_fmt rgb4 -filter:v fps=20 \"{output}.gif\"");
         using (FileStream fs = File.OpenRead(output + ".gif"))
         {
             fs.CopyTo(media);
@@ -56,7 +57,7 @@ internal class ConsoleMediaPlayer
         }
         Console.WriteLine("Načten obraz");
 
-        await FFmpeg.Conversions.New().Start($"-y -i \"{ input }\" \"{ output }.wav\"");
+        await FFmpeg.Conversions.New().Start($"-y -i \"{input}\" \"{output}.wav\"");
         Console.WriteLine("Načten zvuk");
 
         SoundPlayer player = new SoundPlayer();
@@ -69,7 +70,7 @@ internal class ConsoleMediaPlayer
     {
         numberOfFrames = img.GetFrameCount(FrameDimension.Time);
 
-        t = new System.Timers.Timer(1000 / 25);
+        t = new Timer(1000 / 20);
         t.Elapsed += OnNewFrame;
         t.Start();
     }
@@ -77,11 +78,11 @@ internal class ConsoleMediaPlayer
     private void OnNewFrame(object sender, ElapsedEventArgs e)
     {
         i++;
+        //Console.WriteLine(i);
         if (i >= numberOfFrames)
             End();
 
         Bitmap[] frames = new Bitmap[numberOfFrames];
-        Console.WriteLine();
 
         img.SelectActiveFrame(FrameDimension.Time, i);
         frames[i] = (Bitmap)img.Clone();
@@ -91,22 +92,31 @@ internal class ConsoleMediaPlayer
 
     private void GetColor(Bitmap frame)
     {
+        Stopwatch s = new Stopwatch();
+        s.Start();
         string barvy = "";
+
         for (int y = 0; y < frame.Height; y++)
         {
+            string curString = "";
+            Color curColor = frame.GetPixel(0, y);
             for (int x = 0; x < frame.Width; x++)
             {
-                Color clr = frame.GetPixel(x, y);
-                if (clr.B < 255 && clr.R < 255 && clr.G < 255)
+                Color color = frame.GetPixel(x, y);
+                if (color != curColor)
                 {
-                    barvy += "  ";
-                    continue;
+                    barvy += Rgb(curColor.R, curColor.G, curColor.B).Text(curString);
+                    curString = "";
+                    curColor = color;
                 }
-                barvy += "██";
+                curString += "██";
             }
+            barvy += Rgb(curColor.R, curColor.G, curColor.B).Text(curString);
             barvy += "\n";
         }
         Console.Write(barvy);
+        s.Stop();
+        Trace.WriteLine(s.ElapsedMilliseconds);
     }
 
     private void End()
