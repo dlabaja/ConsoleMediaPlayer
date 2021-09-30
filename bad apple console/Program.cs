@@ -7,9 +7,6 @@ using Xabe.FFmpeg;
 using System.Timers;
 using System.IO;
 using static Crayon.Output;
-using System.Diagnostics;
-using Pastel;
-using System.Runtime.InteropServices;
 
 internal class ConsoleMediaPlayer
 {
@@ -25,8 +22,8 @@ internal class ConsoleMediaPlayer
         Console.Title = "Console Media Player";
         Console.SetBufferSize(128, 64);
 
-        Console.WindowWidth = 128;
-        Console.WindowHeight = 64;
+        Console.WindowWidth = 96;
+        Console.WindowHeight = 48;
         var a = new ConsoleMediaPlayer();
         await a.Converter();
         img = (Bitmap)Image.FromStream(media);
@@ -36,10 +33,10 @@ internal class ConsoleMediaPlayer
 
     private async Task Converter()
     {
-        Console.WriteLine("Načítám data...");
         Console.WriteLine("Zadejte cestu k .mp4 souboru");
         string input = Console.ReadLine();
 
+        Console.WriteLine("Načítám data...");
         while (!Path.IsPathFullyQualified(input))
         {
             Console.WriteLine("Neplatná cesta! Zkuste to prosím znovu.");
@@ -49,7 +46,7 @@ internal class ConsoleMediaPlayer
         Directory.CreateDirectory(Path.Combine(Path.GetTempPath(), "CMP"));
 
         media = new MemoryStream();
-        await FFmpeg.Conversions.New().Start($"-y -i \"{input}\" -s 64x64 -aspect 1:1 -pix_fmt rgb4 -filter:v fps=20 \"{output}.gif\"");
+        await FFmpeg.Conversions.New().Start($"-y -i \"{input}\" -s 48x48 -aspect 1:1 -filter:v fps=20 \"{output}.gif\"");
         using (FileStream fs = File.OpenRead(output + ".gif"))
         {
             fs.CopyTo(media);
@@ -78,7 +75,6 @@ internal class ConsoleMediaPlayer
     private void OnNewFrame(object sender, ElapsedEventArgs e)
     {
         i++;
-        //Console.WriteLine(i);
         if (i >= numberOfFrames)
             End();
 
@@ -92,8 +88,6 @@ internal class ConsoleMediaPlayer
 
     private void GetColor(Bitmap frame)
     {
-        Stopwatch s = new Stopwatch();
-        s.Start();
         string barvy = "";
 
         for (int y = 0; y < frame.Height; y++)
@@ -115,8 +109,6 @@ internal class ConsoleMediaPlayer
             barvy += "\n";
         }
         Console.Write(barvy);
-        s.Stop();
-        Trace.WriteLine(s.ElapsedMilliseconds);
     }
 
     private void End()
