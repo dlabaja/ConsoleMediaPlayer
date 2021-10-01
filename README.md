@@ -1,4 +1,4 @@
 # ConsoleMediaPlayer
-Play your favorite videos inside console!
+Play your favorite videos inside the console!
 
 
